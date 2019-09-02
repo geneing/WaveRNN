@@ -26,11 +26,11 @@ def process_file(path):
         # copy symbolic link of wav file
         quant = None
     elif type(CONFIG.mode) is int and CONFIG.mulaw:
-        quant = ap.mulaw_encode(wav, self.mode)
+        quant = ap.mulaw_encode(wav, CONFIG.mode)
         quant = quant.astype(np.int32)
     elif type(CONFIG.mode) is int:
         quant = ap.quantize(wav)
-        quant = quant.clip(0, 2 ** CONFIG.audio['bits'] - 1)
+        quant = quant.clip(0, 2 ** CONFIG.mode - 1)
         quant = quant.astype(np.int32)
     return mel.astype(np.float32), quant, wav
 
@@ -46,7 +46,7 @@ def extract_feats(wav_path):
             raise RuntimeError(" [!] Cannot process {}".format(wav_path))
     if quant is None and CONFIG.mode not in ['mold', 'gauss']:
         raise RuntimeError(" [!] Audio file cannot be quantized!")
-    if quant:
+    if not ( quant is None):
         assert quant.max() < 2 ** CONFIG.audio['bits'], wav_path
         assert quant.min() >= 0
         np.save(f"{QUANT_PATH}{idx}.npy", quant, allow_pickle=False)
@@ -79,7 +79,9 @@ if __name__ == "__main__":
 
     if args.data_path != '':
         CONFIG.data_path = args.data_path
-
+    
+    if type(CONFIG.mode) is int:
+        CONFIG.audio['bits'] = CONFIG.mode
     ap = AudioProcessor(**CONFIG.audio)
 
     SEG_PATH = CONFIG.data_path

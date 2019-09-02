@@ -1,0 +1,48 @@
+{ 
+    "model_name": "TTS_MaryAnn",
+    "model_description": "Training a vocoder for TTS on MaryAnn dataset.",
+
+    "audio":{
+        // Audio processing parameters
+        "num_mels": 80,         // size of the mel spec frame. 
+        "num_freq": 1025,       // number of stft frequency levels. Size of the linear spectogram frame.
+        "sample_rate": 16000,   // DATASET-RELATED: wav sample-rate. If different than the original data, it is resampled.
+        "frame_length_ms": 50,  // stft window length in ms.
+        "frame_shift_ms": 12.5, // stft window hop-lengh in ms.
+        "preemphasis": 0.98,    // pre-emphasis to reduce spec noise and make it more structured. If 0.0, no -pre-emphasis.
+        "min_level_db": -100,   // normalization range
+        "ref_level_db": 20,     // reference level db, theoretically 20db is the sound of air.
+        "power": 1.5,           // value to sharpen wav signals after GL algorithm.
+        "griffin_lim_iters": 60,// #griffin-lim iterations. 30-60 is a good range. Larger the value, slower the generation.
+        // Normalization parameters
+        "signal_norm": true,    // normalize the spec values in range [0, 1]
+        "symmetric_norm": true, // move normalization to range [-1, 1]
+        "max_norm": 4,          // scale normalization to range [-max_norm, max_norm] or [0, max_norm]
+        "clip_norm": true,      // clip normalized values into the range.
+        "mel_fmin": 0.0,         // minimum freq level for mel-spec. ~50 for male and ~95 for female voices. Tune for dataset!!
+        "mel_fmax": 8000.0,        // maximum freq level for mel-spec. Tune for dataset!!
+        "do_trim_silence": true  // enable trimming of slience of audio as you load it. LJspeech (false), TWEB (false), Nancy (true)
+    },
+
+    "distributed":{
+        "backend": "nccl",
+        "url": "tcp:\/\/localhost:54321"
+    },
+
+    "epochs": 10000,
+    "grad_clip": 500,
+    "lr": 0.0001,
+    "warmup_steps": 10,
+    "batch_size": 64,
+    "checkpoint_step": 10000,
+    "print_step": 10,
+    "num_workers": 8,
+    "mel_len": 10,
+    "pad": 2,
+    "upsample_factors": [5, 5, 12],
+    "mode": 10,         // mold [string], gauss [string], bits [int]
+    "mulaw": true,         // apply mulaw if mode is bits
+
+    "data_path": "/home/erogol/Data/Libri-TTS/all_wavs_360/",
+    "output_path": "/media/erogol/data_ssd/Data/models/wavernn/mozilla/"
+}
