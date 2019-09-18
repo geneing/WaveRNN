@@ -35,11 +35,13 @@
     "warmup_steps": 10,
     "batch_size": 64,
     "checkpoint_step": 10000,
-    "print_step": 10,
+    "print_step": 50,
     "num_workers": 8,
     "mel_len": 10,
     "pad": 2,
-    "upsample_factors": [5, 5, 12],
+    "use_aux_net": true,
+    "use_upsample_net": true,
+    "upsample_factors": [5, 5, 8],
     "mode": 10,         // mold [string], gauss [string], bits [int]
     "mulaw": true,         // apply mulaw if mode is bits
 

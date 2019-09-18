@@ -23,7 +23,7 @@ from utils.distribution import discretized_mix_logistic_loss, gaussian_loss
 from utils.generic_utils import (check_update, count_parameters, load_config,
                                  remove_experiment_folder, save_checkpoint,
                                  save_best_model)
-
+from ranger.ranger913A import Ranger
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = False
@@ -81,7 +81,7 @@ def train(model, optimizer, criterion, scheduler, epochs, batch_size, step, lr, 
         for i, (x, m, y) in enumerate(train_loader):
             if use_cuda:
                 x, m, y = x.cuda(), m.cuda(), y.cuda()
-            scheduler.step()
+            #scheduler.step()
             optimizer.zero_grad()
             y_hat = model(x, m)
             # y_hat = y_hat.transpose(1, 2)
@@ -205,11 +205,12 @@ def main(args):
 
     num_parameters = count_parameters(model)
     print(" > Number of model parameters: {}".format(num_parameters), flush=True)
-    optimizer = optim.Adam(model.parameters(), lr=CONFIG.lr)
+    #optimizer = optim.Adam(model.parameters(), lr=CONFIG.lr)
+    optimizer = Ranger(model.parameters(), lr=CONFIG.lr, )
     
     # slow start for the first 5 epochs
     lr_lambda = lambda epoch: min(epoch / CONFIG.warmup_steps , 1)
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
+    scheduler = None #optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
 
     step = 0
     # restore any checkpoint
@@ -351,12 +352,12 @@ if __name__ == "__main__":
     try:
         main(args)
     except KeyboardInterrupt:
-        remove_experiment_folder(OUT_PATH)
+        #remove_experiment_folder(OUT_PATH)
         try:
             sys.exit(0)
         except SystemExit:
             os._exit(0)
     except Exception:
-        remove_experiment_folder(OUT_PATH)
+        #remove_experiment_folder(OUT_PATH)
         traceback.print_exc()
         sys.exit(1)

@@ -149,6 +149,7 @@ class Model(nn.Module) :
         self.sample_rate = sample_rate
 
         if self.use_upsample_net:
+            print("Hop length: ", self.hop_length)
             assert np.cumproduct(upsample_factors)[-1] == self.hop_length, " [!] upsample scales needs to be equal to hop_length"
             self.upsample = UpsampleNetwork(feat_dims, upsample_factors, compute_dims, 
                                             res_blocks, res_out_dims, pad, use_aux_net)
