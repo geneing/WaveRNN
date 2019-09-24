@@ -23,7 +23,7 @@ from utils.distribution import discretized_mix_logistic_loss, gaussian_loss
 from utils.generic_utils import (check_update, count_parameters, load_config,
                                  remove_experiment_folder, save_checkpoint,
                                  save_best_model)
-from ranger.ranger913A import Ranger
+from ranger.ranger import Ranger
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = False

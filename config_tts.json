@@ -37,7 +37,7 @@
     "checkpoint_step": 10000,
     "print_step": 50,
     "num_workers": 8,
-    "mel_len": 10,
+    "mel_len": 8,
     "pad": 2,
     "use_aux_net": true,
     "use_upsample_net": true,
