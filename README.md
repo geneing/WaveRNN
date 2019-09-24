@@ -1,28 +1,14 @@
 # WaveRNN
 
-Pytorch implementation of Deepmind's WaveRNN model from [Efficient Neural Audio Synthesis](https://arxiv.org/abs/1802.08435v1)
+This code is forked from https://github.com/fatchord/WaveRNN and optimized for [Mozilla-TTS](https://github.com/mozilla/TTS).
 
-This is a fork that implements a standalone version based on the notebooks by fatchord (https://github.com/fatchord/WaveRNN).
+# Released Models
+| Models        |Dataset | Commit            | Audio Sample  | TTS model | Details|
+| ------------- |:------:|:-----------------:|:--------------|:--------|--------- |
+| [mold model](https://drive.google.com/drive/folders/1wpPn3a0KQc6EYtKL0qOi4NqEmhML71Ve?usp=sharing) |LJspeech| 8a1c152 | [soundcloud](https://soundcloud.com/user-565970875/ljspeech-logistic-wavernn) | [Tacotron2-iter-260K](https://drive.google.com/drive/folders/1FJRjGDAqWIyZRX4CsppaIPEW8UWXCWzF) | Model with Mixture of Logistic Distribution |
+| [10bit model](https://drive.google.com/drive/folders/1VnTJfg2zmvochFNyX7oyUv9TFq6JsnVp?usp=sharing) | LJSpeech | faea90b | [soundcloud](https://soundcloud.com/user-565970875/commonvoice-1) | [Tacotron2-iter-260K](https://drive.google.com/drive/folders/1FJRjGDAqWIyZRX4CsppaIPEW8UWXCWzF) | 10bit Softmax output |
+| [universal vocoder](https://drive.google.com/drive/u/1/folders/15JhAbc91dT-RRZwakh_v4tBVOEuoOikg) | LibriTTS | 12c8744 | [soundcloud](https://soundcloud.com/user-565970875/sets/universal-vocoder-with-wavernn) |  - | [(details)](https://github.com/mozilla/TTS/issues/221) |
 
-
-<img src="https://raw.githubusercontent.com/fatchord/WaveRNN/master/assets/WaveRNN.png" alt="drawing" width="600px"/>
-<img src="https://raw.githubusercontent.com/fatchord/WaveRNN/master/assets/wavernn_alt_model_hrz2.png" alt="drawing" width="600px"/>
-
-
-
-
-# Pretrained models
-
-Trained on LJSpeech:
-
-* Commit: https://github.com/geneing/WaveRNN/commit/fa282a4b7c8c31318b47617688fad3b8ed6856df (https://app.box.com/s/uij3u2x6rxx2m01kbzirr4cto0jclqxe)
-
-After 400 epochs, the quality is quite good. [Reference](https://app.box.com/s/nm9reae7x8dh5j4ot63g8njdnsegkmnd), [Generated](https://app.box.com/s/juz31710hsma6xs8z26eh4dvn53wzidc)
-
-After 700 epochs, 10bit encoding. Sound quality is even better than 9bit. [Folder](https://app.box.com/s/wy5wai8tutjir07e66xps0a38mxbdqmy)
-### Dependencies
-* Python 3
-* Pytorch v0.5
-* Librosa
-
-**Disclaimer** I do not represent or work for Deepmind/Google.
+Check this [TTS notebook](https://github.com/mozilla/TTS/blob/master/notebooks/Benchmark.ipynb) to see TTS+WaveRNN in action. 
+To train your own model, you can use [ExtractTTSSpectrogram](https://github.com/erogol/WaveRNN/blob/master/notebooks/ExtractTTSpectrogram.ipynb) to generate spectrograms by TTS and train WaveRNN.
+It might be also interesting to check this [TTS issue](https://github.com/mozilla/TTS/issues/26) to catchup with the current state.

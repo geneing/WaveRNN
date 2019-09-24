@@ -1,0 +1,8 @@
+#!/bin/bash
+yes | apt-get install libsndfile1
+pip3 install https://download.pytorch.org/whl/cu100/torch-1.1.0-cp36-cp36m-linux_x86_64.whl
+pip3 install -r requirements.txt
+# python3 preprocess_data.py --config_path config_libri360.json --num_procs 16 --out_path /data/rw/home/LibriTTS/wavernn_360/ --data_path /data/rw/home/LibriTTS/all_wavs_360/
+# ln -s /data/rw/home/LibriTTS/all_wavs_360/ wavernn_360/wavs/
+# python3 distribute.py --config_path config_libri360.json  --data_path /data/rw/home/LibriTTS/wavernn_360/  --output_path ../keep/  
+while true; do sleep 1000000; done

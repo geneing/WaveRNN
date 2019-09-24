@@ -1,0 +1,48 @@
+{
+    "model_name": "wavernn_4241_finetune_gaussian",
+    "model_description": "Gaussian model as in Clarinet",
+
+    "audio":{
+        "audio_processor": "audio",     // to use dictate different audio processors, if available.
+        // Audio processing parameters
+        "num_mels": 80,         // size of the mel spec frame. 
+        "num_freq": 1025,       // number of stft frequency levels. Size of the linear spectogram frame.
+        "sample_rate": 22050,   // wav sample-rate. If different than the original data, it is resampled.
+        "frame_length_ms": 50,  // stft window length in ms.
+        "frame_shift_ms": 12.5, // stft window hop-lengh in ms.
+        "preemphasis": 0.98,    // pre-emphasis to reduce spec noise and make it more structured. If 0.0, no -pre-emphasis.
+        "min_level_db": -100,   // normalization range
+        "ref_level_db": 20,     // reference level db, theoretically 20db is the sound of air.
+        "power": 1.5,           // value to sharpen wav signals after GL algorithm.
+        "griffin_lim_iters": 60,// #griffin-lim iterations. 30-60 is a good range. Larger the value, slower the generation.
+        // Normalization parameters
+        "signal_norm": true,    // normalize the spec values in range [0, 1]
+        "symmetric_norm": false, // move normalization to range [-1, 1]
+        "max_norm": 1,          // scale normalization to range [-max_norm, max_norm] or [0, max_norm]
+        "clip_norm": true,      // clip normalized values into the range.
+        "mel_fmin": 0.0,         // minimum freq level for mel-spec. ~50 for male and ~95 for female voices. Tune for dataset!!
+        "mel_fmax": 8000.0,        // maximum freq level for mel-spec. Tune for dataset!!
+        "do_trim_silence": false  // KEEP ALWAYS FALSE
+    },
+
+    "distributed":{
+        "backend": "nccl",
+        "url": "tcp:\/\/localhost:54321"
+    },
+
+    "epochs": 10000,
+    "grad_clip": 1000,
+    "lr": 0.0001,
+    "warmup_steps": 100,
+    "batch_size": 32,
+    "checkpoint_step": 1000,
+    "print_step": 10,
+    "num_workers": 8,
+    "mel_len": 8,
+    "pad": 2,
+    "upsample_factors": [5, 5, 11],
+    "mode": "mold",      // model with gaussian (gaus), misture of logistic dist (mold). or raw bit output (# bits).
+
+    "data_path": "/home/erogol/Data/LJSpeech-1.1/wavernn_4467/",
+    "output_path": "/media/erogol/data_ssd/Data/models/wavernn/"
+}

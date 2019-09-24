@@ -23,7 +23,7 @@ from utils.distribution import discretized_mix_logistic_loss, gaussian_loss
 from utils.generic_utils import (check_update, count_parameters, load_config,
                                  remove_experiment_folder, save_checkpoint,
                                  save_best_model)
-from ranger.ranger import Ranger
+
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = False
@@ -55,121 +55,74 @@ def setup_loader(is_val=False):
         # shuffle=True,
         pin_memory=True,
         sampler=sampler,
+        drop_last=True
     )
     return loader
 
 
-def train(model, optimizer, criterion, scheduler, epochs, batch_size, step, lr, args):
+def find_lr(model, optimizer, criterion, batch_size, args, init_lr=1e-7, end_lr=1., beta=0.98):
+    """ from https://sgugger.github.io/how-do-you-find-a-good-learning-rate.html """
     global CONFIG
     global train_ids
     # create train loader
-    train_loader = setup_loader(False)
-
+    data_loader = setup_loader(False)
+    num_iter = len(data_loader) - 1
+    coeff = (end_lr / init_lr) ** (1 / num_iter)
+    lr = init_lr
     for p in optimizer.param_groups:
-        p["initial_lr"] = lr
         p["lr"] = lr
-
     best_loss = float('inf')
-    skipped_steps = 0
-    for e in range(epochs):
-        running_loss = 0.0
-        start = time.time()
-        iters = len(train_loader)
-        # train loop
-        print(" > Training", flush=True)
-        model.train()
-        for i, (x, m, y) in enumerate(train_loader):
-            if use_cuda:
-                x, m, y = x.cuda(), m.cuda(), y.cuda()
-            #scheduler.step()
-            optimizer.zero_grad()
-            y_hat = model(x, m)
-            # y_hat = y_hat.transpose(1, 2)
-            if type(model.mode) == int :
-                y_hat = y_hat.transpose(1, 2).unsqueeze(-1)
-            else:
-                y = y.float()
-            y = y.unsqueeze(-1)
-            # m_scaled, _ = model.upsample(m)
-            loss = criterion(y_hat, y)
-            if loss.item() is None:
-                raise RuntimeError(" [!] None loss. Exiting ...")
-            loss.backward()
-            grad_norm, skip_flag = check_update(model, CONFIG.grad_clip) 
-            if not skip_flag:           
-                optimizer.step()
-                # Compute avg loss
-                if num_gpus > 1:
-                    loss = reduce_tensor(loss.data, num_gpus)
-                running_loss += loss.item()
-                avg_loss = running_loss / (i + 1 - skipped_steps)
-            else:
-                print(" [!] Skipping the step...")
-                skipped_steps += 1
-            speed = (i + 1) / (time.time() - start)
-            step += 1
-            cur_lr = optimizer.param_groups[0]["lr"]
-            
-            if step % CONFIG.print_step == 0:
-                print(
-                    " | > Epoch: {}/{} -- Batch: {}/{} -- Loss: {:.3f}"
-                    " -- Speed: {:.2f} steps/sec -- Step: {} -- lr: {} -- GradNorm: {}".format(
-                        e + 1, epochs, i + 1, iters, avg_loss, speed, step, cur_lr, grad_norm
-                    ), flush=True
-                )
-            if step % CONFIG.checkpoint_step == 0 and args.rank == 0:
-                save_checkpoint(model, optimizer, avg_loss, MODEL_PATH, step, e)
-                print(" > checkpoint saved", flush=True)
-        # visual
-        # m_scaled, _ = model.upsample(m)
-        # plot_spec(m[0], VIS_PATH + "/mel_{}.png".format(step))
-        # plot_spec(
-        #     m_scaled[0].transpose(0, 1), VIS_PATH + "/mel_scaled_{}.png".format(step)
-        # )
-        # validation loop
-        avg_val_loss = evaluate(model, criterion, batch_size)
-        if args.rank == 0:
-            best_loss = save_best_model(model, optimizer, avg_val_loss, best_loss, MODEL_PATH, step, e)
-
-
-
-def evaluate(model, criterion, batch_size):
-    global CONFIG
-    global test_ids
-    # create train loader
-    val_loader = setup_loader(True)
-
-    running_val_loss = 0.0
-    iters = len(val_loader)
+    avg_loss = 0.0
+    losses = []
+    log_lrs = []
+    start = time.time()
     # train loop
-    print(" > Validation", flush=True)
-    model.eval()
-    val_step = 0
-    with torch.no_grad():
-        for i, (x, m, y) in enumerate(val_loader):
-            if use_cuda:
-                x, m, y = x.cuda(), m.cuda(), y.cuda()
-            y_hat = model(x, m)
-            if type(model.mode) == int :
-                y_hat = y_hat.transpose(1, 2).unsqueeze(-1)
-            else:
-                y = y.float()
-            y = y.unsqueeze(-1)
-            loss = criterion(y_hat, y)
-            # Compute avg loss
-            if num_gpus > 1:
-                loss = reduce_tensor(loss.data, num_gpus)
-            running_val_loss += loss.item()
-            avg_val_loss = running_val_loss / (i + 1)
-            val_step += 1
-            if val_step % CONFIG.print_step == 0:
-                print(
-                    " | > Batch: {}/{} -- Loss: {:.3f}".format(
-                        iters, val_step, avg_val_loss
-                    )
-                )
-        print(" | > Validation Loss: {}".format(avg_val_loss), flush=True)
-    return avg_val_loss
+    print(" > Training", flush=True)
+    model.train()
+    for i, (x, m, y) in enumerate(data_loader):
+        if use_cuda:
+            x, m, y = x.cuda(), m.cuda(), y.cuda()
+        optimizer.zero_grad()
+        y_hat = model(x, m)
+        # y_hat = y_hat.transpose(1, 2)
+        if type(model.mode) == int :
+            y_hat = y_hat.transpose(1, 2).unsqueeze(-1)
+        else:
+            y = y.float()
+        y = y.unsqueeze(-1)
+        loss = criterion(y_hat, y)
+        # compute smoothed loss
+        avg_loss = beta * avg_loss + (1-beta) * loss.item()
+        smoothed_loss = avg_loss / (1 - beta**(i + 1))
+        # stop if the loss is exploding
+        if i > 0 and smoothed_loss > 100 * best_loss:
+            break
+        # Record the best loss
+        if smoothed_loss < best_loss:
+            best_loss = smoothed_loss
+        # Store the values
+        losses.append(smoothed_loss)
+        log_lrs.append(math.log10(lr))
+        # Do optimizer step
+        loss.backward()
+        optimizer.step()
+        speed = (i + 1) / (time.time() - start)
+        if i % CONFIG.print_step == 0:
+            print(
+                " | > Epoch: {}/{} -- Batch: {}/{} -- Loss: {:.3f}"
+                " -- Speed: {:.2f} steps/sec -- lr: {}".format(
+                    1, 1, i + 1, num_iter, avg_loss, speed, lr
+                ), flush=True
+            )
+        # Update the lr for the next step
+        lr *= coeff
+        optimizer.param_groups[0]['lr'] = lr
+    # plot results
+    if args.rank == 0:
+        plt.plot(log_lrs, losses)
+        print(f"{VIS_PATH}/find_lr.png")
+        plt.savefig(f"{VIS_PATH}/find_lr.png")
+        plt.close
 
 
 def main(args):
@@ -186,14 +139,13 @@ def main(args):
     train_ids = train_ids[:-10]
 
     # create the model
+    assert np.prod(CONFIG.upsample_factors) == ap.hop_length, ap.hop_length
     model = Model(
         rnn_dims=512,
         fc_dims=512,
         mode=CONFIG.mode,
         mulaw=CONFIG.mulaw,
         pad=CONFIG.pad,
-        use_aux_net=CONFIG.use_aux_net,
-        use_upsample_net=CONFIG.use_upsample_net,
         upsample_factors=CONFIG.upsample_factors,
         feat_dims=80,
         compute_dims=128,
@@ -205,14 +157,8 @@ def main(args):
 
     num_parameters = count_parameters(model)
     print(" > Number of model parameters: {}".format(num_parameters), flush=True)
-    #optimizer = optim.Adam(model.parameters(), lr=CONFIG.lr)
-    optimizer = Ranger(model.parameters(), lr=CONFIG.lr, )
-    
-    # slow start for the first 5 epochs
-    lr_lambda = lambda epoch: min(epoch / CONFIG.warmup_steps , 1)
-    scheduler = None #optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
+    optimizer = optim.Adam(model.parameters(), lr=CONFIG.lr)
 
-    step = 0
     # restore any checkpoint
     if args.restore_path:
         checkpoint = torch.load(args.restore_path)
@@ -242,7 +188,6 @@ def main(args):
                     len(pretrained_dict), len(model_dict)
                 )
             )
-        step = checkpoint["step"]
 
     # DISTRIBUTED
     if num_gpus > 1:
@@ -258,16 +203,15 @@ def main(args):
     model.train()
 
     # HIT IT!!!
-    train(
+    find_lr(
         model,
         optimizer,
         criterion,
-        scheduler,
-        epochs=CONFIG.epochs,
-        batch_size=CONFIG.batch_size,
-        step=step,
-        lr=CONFIG.lr * num_gpus,
-        args=args,
+        CONFIG.batch_size,
+        args,
+        init_lr=args.init_lr,
+        end_lr=args.end_lr,
+        beta=0.98
     )
 
 
@@ -284,6 +228,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--output_path", type=str, help="path for training outputs.", default=""
+    )
+    parser.add_argument(
+        "--init_lr", type=float, help="path for training outputs.", default=1e-7
+    )
+    parser.add_argument(
+        "--end_lr", type=float, help="path for training outputs.", default=1
     )
     # DISTRUBUTED
     parser.add_argument(
@@ -330,34 +280,14 @@ if __name__ == "__main__":
     if args.group_id == "":
         OUT_PATH = create_experiment_folder(OUT_PATH, CONFIG.model_name)
 
-    AUDIO_PATH = os.path.join(OUT_PATH, "test_audios")
 
     if args.rank == 0:
         # set paths
-        MODEL_PATH = f"{OUT_PATH}/model_checkpoints/"
-        GEN_PATH = f"{OUT_PATH}/model_outputs/"
-        VIS_PATH = f"{OUT_PATH}/visual/"
+        VIS_PATH = f"{OUT_PATH}/lr_find/"
         shutil.copyfile(args.config_path, os.path.join(OUT_PATH, "config.json"))
 
         # create paths
-        os.makedirs(MODEL_PATH, exist_ok=True)
-        os.makedirs(GEN_PATH, exist_ok=True)
         os.makedirs(VIS_PATH, exist_ok=True)
 
-        os.makedirs(AUDIO_PATH, exist_ok=True)
-        shutil.copyfile(args.config_path, os.path.join(OUT_PATH, "config.json"))
-        os.chmod(AUDIO_PATH, 0o775)
-        os.chmod(OUT_PATH, 0o775)
-
-    try:
-        main(args)
-    except KeyboardInterrupt:
-        #remove_experiment_folder(OUT_PATH)
-        try:
-            sys.exit(0)
-        except SystemExit:
-            os._exit(0)
-    except Exception:
-        #remove_experiment_folder(OUT_PATH)
-        traceback.print_exc()
-        sys.exit(1)
+    main(args)
+    
