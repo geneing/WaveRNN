@@ -227,9 +227,9 @@ class Model(nn.Module) :
 
             b_size, seq_len, _ = mels.size()
             
-            h1 = torch.zeros(b_size, self.rnn_dims).cuda()
-            h2 = torch.zeros(b_size, self.rnn_dims).cuda()
-            x = torch.zeros(b_size, 1).cuda()
+            h1 = torch.zeros(b_size, self.rnn_dims).to(mels.device)
+            h2 = torch.zeros(b_size, self.rnn_dims).to(mels.device)
+            x = torch.zeros(b_size, 1).to(mels.device)
             
             if self.use_aux_net:
                 d = self.aux_dims
@@ -292,11 +292,6 @@ class Model(nn.Module) :
         if self.mulaw and type(self.mode) == int:
             output = ap.mulaw_decode(output, self.mode)
 
-        # Fade-out at the end to avoid signal cutting out suddenly
-        fade_out = np.linspace(1, 0, 20 * self.hop_length)
-        output = output[:wave_len]
-        output[-20 * self.hop_length:] *= fade_out
-            
         self.train()
         return output
     
@@ -320,10 +315,10 @@ class Model(nn.Module) :
         # i.e., it won't generalise to other shapes/dims
         b, t, c = x.size()
         total = t + 2 * pad if side == 'both' else t + pad
-        padded = torch.zeros(b, total, c).cuda()
+        padded = torch.zeros(b, total, c).to(x.device)
         if side == 'before' or side == 'both' :
             padded[:, pad:pad+t, :] = x
-        elif side == 'after' :
+        elif side == 'after':
             padded[:, :t, :] = x    
         return padded
 
@@ -361,7 +356,7 @@ class Model(nn.Module) :
             padding = target + 2 * overlap - remaining
             x = self.pad_tensor(x, padding, side='after')
 
-        folded = torch.zeros(num_folds, target + 2 * overlap, features).cuda()
+        folded = torch.zeros(num_folds, target + 2 * overlap, features).to(x.device)
 
         # Get the values for the folded tensor
         for i in range(num_folds):
