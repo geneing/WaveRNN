@@ -15,8 +15,16 @@ def float_2_label(x, bits):
     return x.clip(0, 2**bits - 1)
 
 
+def trim_silence(wav):
+    """ Trim silent parts with a threshold and 0.01 sec margin """
+    margin = int(hp.sample_rate * 0.01)
+    wav = wav[margin:-margin]
+    return librosa.effects.trim(
+        wav, top_db=40, frame_length=1024, hop_length=256)[0]
+
 def load_wav(path):
-    return librosa.load(path, sr=hp.sample_rate)[0]
+    w = trim_silence(librosa.load(path, sr=hp.sample_rate)[0])
+    return w
 
 
 def save_wav(x, path):
