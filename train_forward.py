@@ -58,6 +58,7 @@ def main():
                             prenet_k=hp.forward_prenet_K,
                             prenet_dims=hp.forward_prenet_dims,
                             highways=hp.forward_num_highways,
+                            dropout=hp.forward_dropout,
                             n_mels=hp.num_mels).to(device)
 
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())

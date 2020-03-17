@@ -96,7 +96,6 @@ tts_checkpoint_every = 5_000        # checkpoints the model every X steps
 
 # FORWARD TACOTRON -----------------------------------------------------------------------------------------------------#
 
-
 # Model Hparams
 forward_embed_dims = 256                # embedding dimension for the graphemes/phoneme inputs
 forward_prenet_dims = 256

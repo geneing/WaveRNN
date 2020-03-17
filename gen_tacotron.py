@@ -24,7 +24,7 @@ if __name__ == '__main__':
     parser.set_defaults(weights_path=None)
 
     # name of subcommand goes to args.vocoder
-    subparsers = parser.add_subparsers(required=True, dest='vocoder')
+    subparsers = parser.add_subparsers(dest='vocoder')
 
     wr_parser = subparsers.add_parser('wavernn', aliases=['wr'])
     wr_parser.add_argument('--batched', '-b', dest='batched', action='store_true', help='Fast Batched Generation')
