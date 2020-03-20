@@ -255,7 +255,7 @@ class WaveRNN(nn.Module):
         # Fade-out at the end to avoid signal cutting out suddenly
         fade_out = np.linspace(1, 0, 20 * self.hop_length)
         output = output[:wave_len]
-        output[-20 * self.hop_length:] *= fade_out
+        #output[-20 * self.hop_length:] *= fade_out
 
         save_wav(output, save_path)
 
