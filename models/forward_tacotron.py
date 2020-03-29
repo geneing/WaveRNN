@@ -16,15 +16,11 @@ class LengthRegulator(nn.Module):
         super().__init__()
 
     def forward(self, x, dur):
-        output = []
-        for x_i, dur_i in zip(x, dur):
-            expanded = self.expand(x_i, dur_i)
-            output.append(expanded)
-        output = self.pad(output)
-        return output
-
+        return self.expand(x, dur)
+     
     @staticmethod
     def build_index(duration, x):
+        duration[duration<0]=0
         tot_duration = duration.cumsum(1).detach().cpu().numpy().astype('int')
         max_duration = int(tot_duration.max().item())
         index = np.zeros([x.shape[0], max_duration, x.shape[2]], dtype='long')
