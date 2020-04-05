@@ -262,28 +262,26 @@ class Model(nn.Module) :
 
                 if self.mode == 'mold':
                     sample = sample_from_discretized_mix_logistic(logits.unsqueeze(0).transpose(1, 2))
-                    output.append(sample.view(-1))
+                    output.append(sample.view(-1).cpu().numpy())
                     x = sample.transpose(0, 1).cuda()
                 elif self.mode == 'gauss':
                     sample = sample_from_gaussian(logits.unsqueeze(0).transpose(1, 2))
-                    output.append(sample.view(-1))
+                    output.append(sample.view(-1).cpu().numpy())
                     x = sample.transpose(0, 1).cuda()
                 elif type(self.mode) is int:
                     posterior = F.softmax(logits, dim=1)
                     distrib = torch.distributions.Categorical(posterior)
 
                     sample = 2 * distrib.sample().float() / (self.n_classes - 1.) - 1.
-                    output.append(sample)
+                    output.append(sample.cpu().numpy())
                     x = sample.unsqueeze(-1)                    
                 else:
                     raise RuntimeError("Unknown model mode value - ", self.mode)
                 
                 if i % 100 == 0 : self.gen_display(i, seq_len, b_size, start)
         
-        output = torch.stack(output).transpose(0, 1)
-        output = output.cpu().numpy()
-        output = output.astype(np.float64)
-        
+        output = np.vstack(output).T
+
         if batched :
             output = self.xfade_and_unfold(output, target, overlap)
         else :
